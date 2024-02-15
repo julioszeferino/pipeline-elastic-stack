@@ -1,0 +1,92 @@
+version: '3.8'
+
+services:
+  node1:
+    container_name: elastic-master
+    build:
+      context: .
+      dockerfile: master.dockerfile
+    image: elastic-master
+    privileged: true
+    user: root
+    command:
+      - /bin/bash
+      - -c
+      - |
+        sysctl -w vm.max_map_count=262144 &&
+        sudo -u elasticsearch bash << EOF
+          /opt/elasticsearch/entrypoint.sh master
+        EOF
+    ports:
+      - "9201:9200"
+      - "9301:9300"
+      - "5601:5601"
+    volumes:
+      - /elasticsearch/master-logs:/var/log/elk:rw
+    # DOIS TESTES DE SAUDE
+    healthcheck:
+      test: ["CMD-SHELL", "curl -XGET http://localhost:9200/_cluster/state?pretty || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - elastic
+
+
+  node2:
+    container_name: elastic-data
+    build:
+      context: .
+      dockerfile: datanode.dockerfile
+    image: elastic-data
+    privileged: true
+    user: root
+    command:
+      - /bin/bash
+      - -c
+      - |
+        sysctl -w vm.max_map_count=262144 &&
+        sudo -u elasticsearch bash << EOF
+          /opt/elasticsearch/entrypoint.sh data
+        EOF
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    # DOIS TESTES DE SAUDE
+    healthcheck:
+      test: ["CMD-SHELL", "curl -XGET http://localhost:9200/_cluster/state?pretty || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    volumes:
+      - /elasticsearch/node-logs:/var/log/elk:rw
+    networks:
+      - elastic
+    depends_on:
+      - node1
+
+  metadata:
+    container_name: bd
+    image: mysql:5.7
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: fabrica_db
+      MYSQL_USER: elastic
+      MYSQL_PASSWORD: elastic
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./dbinit:/docker-entrypoint-initdb.d
+      - dados:/var/lib/mysql
+    networks:
+      - elastic
+    depends_on:
+      - node1
+      - node2
+
+networks:
+  elastic:
+    driver: bridge
+
+volumes:
+  dados:

@@ -1,0 +1,26 @@
+# Nome do cluster
+cluster.name: cluster-dsa
+
+# Coloque o nome do node correspondente
+node.name: "node2"
+
+# Caminho dos dados
+path.data: /opt/elasticsearch/data
+
+# Caminho dos Logs
+path.logs: /opt/elasticsearch/logs
+
+# Define o node1 como Master Node
+node.master: false
+
+# Define o node 2 como Data Node
+node.data: true
+
+# Configure o ip e porta em cada node
+network.host: 0.0.0.0
+http.port: 9200
+
+# Configure o ip/nome de cada node do cluster
+discovery.seed_hosts: ["node1", "node2"]
+
+cluster.initial_master_nodes: ["node1"]
